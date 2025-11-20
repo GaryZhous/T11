@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext(null);
 
-// TODO: get the BACKEND_URL.
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
 
 /*
  * This provider should export a `user` context state that is 
@@ -16,11 +16,37 @@ const AuthContext = createContext(null);
  */
 export const AuthProvider = ({ children }) => {
     const navigate = useNavigate();
-    // const user = null; // TODO: Modify me.
+    const [user, setUser] = useState(null);
 
-    useEffect({
-        // TODO: complete me, by retriving token from localStorage and make an api call to GET /user/me.
-    }, [])
+    useEffect(() => {
+        // Retrieve token from localStorage and make an API call to GET /user/me
+        const token = localStorage.getItem('token');
+        if (token) {
+            fetch(`${BACKEND_URL}/user/me`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    // Token is invalid, remove it
+                    localStorage.removeItem('token');
+                    throw new Error('Invalid token');
+                }
+            })
+            .then(data => {
+                setUser(data.user);
+            })
+            .catch(error => {
+                console.error('Error fetching user:', error);
+                setUser(null);
+            });
+        }
+    }, []);
 
     /*
      * Logout the currently authenticated user.
@@ -28,8 +54,8 @@ export const AuthProvider = ({ children }) => {
      * @remarks This function will always navigate to "/".
      */
     const logout = () => {
-        // TODO: complete me
-
+        localStorage.removeItem('token');
+        setUser(null);
         navigate("/");
     };
 
@@ -42,8 +68,40 @@ export const AuthProvider = ({ children }) => {
      * @returns {string} - Upon failure, Returns an error message.
      */
     const login = async (username, password) => {
-        // TODO: complete me
-        return "TODO: complete me";
+        try {
+            const response = await fetch(`${BACKEND_URL}/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                // Store token in localStorage
+                localStorage.setItem('token', data.token);
+                
+                // Fetch user data
+                const userResponse = await fetch(`${BACKEND_URL}/user/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${data.token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const userData = await userResponse.json();
+                setUser(userData.user);
+                navigate("/profile");
+                return null;
+            } else {
+                return data.message;
+            }
+        } catch (error) {
+            return "An error occurred during login";
+        }
     };
 
     /**
@@ -54,8 +112,26 @@ export const AuthProvider = ({ children }) => {
      * @returns {string} - Upon failure, returns an error message.
      */
     const register = async (userData) => {
-        // TODO: complete me
-        return "TODO: complete me";
+        try {
+            const response = await fetch(`${BACKEND_URL}/register`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(userData)
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                navigate("/success");
+                return null;
+            } else {
+                return data.message;
+            }
+        } catch (error) {
+            return "An error occurred during registration";
+        }
     };
 
     return (
