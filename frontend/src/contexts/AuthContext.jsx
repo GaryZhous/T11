@@ -77,28 +77,29 @@ export const AuthProvider = ({ children }) => {
                 body: JSON.stringify({ username, password })
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                // Store token in localStorage
-                localStorage.setItem('token', data.token);
-                
-                // Fetch user data
-                const userResponse = await fetch(`${BACKEND_URL}/user/me`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${data.token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                const userData = await userResponse.json();
-                setUser(userData.user);
-                navigate("/profile");
-                return null;
-            } else {
+            if (!response.ok) {
+                const data = await response.json();
                 return data.message;
             }
+
+            const data = await response.json();
+            
+            // Store token in localStorage
+            localStorage.setItem('token', data.token);
+            
+            // Fetch user data
+            const userResponse = await fetch(`${BACKEND_URL}/user/me`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${data.token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const userData = await userResponse.json();
+            setUser(userData.user);
+            navigate("/profile");
+            return null;
         } catch (error) {
             return "An error occurred during login";
         }
@@ -121,14 +122,14 @@ export const AuthProvider = ({ children }) => {
                 body: JSON.stringify(userData)
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                navigate("/success");
-                return null;
-            } else {
+            if (!response.ok) {
+                const data = await response.json();
                 return data.message;
             }
+
+            const data = await response.json();
+            navigate("/success");
+            return null;
         } catch (error) {
             return "An error occurred during registration";
         }
